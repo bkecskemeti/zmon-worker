@@ -19,11 +19,12 @@ from traceback import format_exc
 import settings
 from zmon_worker_monitor import eventloghttp
 import snappy
+import opentracing as ot
 
 from redis_context_manager import RedisConnHandler
 from tasks import configure_tasks
 from tasks import check_and_notify, trial_run, cleanup
-
+from basictracer.text_propagator import TextPropagator
 
 logger = logging.getLogger(__name__)
 
@@ -126,66 +127,104 @@ def flow_simple_queue_processor(queue='', **execution_context):
 
                 msg_obj = json.loads(msg)
 
-                msg_body = None
+                trace = msg_obj.get("properties", {}).get("trace")
+                span = extract_tracing_span(trace)
 
-                body_encoding = msg_obj.get("properties", {}).get("body_encoding")
-                if body_encoding == "nested":
-                    msg_body = msg_obj["body"]
-                elif body_encoding == "base64":
-                    msg_body = json.loads(base64.b64decode(msg_obj['body']))
-                elif body_encoding == "snappy":
-                    msg_body = json.loads(snappy.decompress(base64.b64decode(msg_obj['body'])))
+                with span:
+                    try:
+                        is_processed = process_message(queue, known_tasks, reactor, msg_obj)
+                        if is_processed:
+                            span.set_tag('queue_processing_result', 'success')
+                        else:
+                            span.set_tag('queue_processing_result', 'expired')
+                            expired_count += 1
+                            if expired_count % 500 == 0:
+                                logger.warning("expired tasks count: %s", expired_count)
 
-                taskname = msg_body['task']
-                func_args = msg_body['args']
-                func_kwargs = msg_body['kwargs']
-                timelimit = msg_body.get('timelimit')  # [90, 60]
-                t_hard, t_soft = timelimit
-
-                # we pass task metadata as a kwargs right now, later will be put in the function context by decorator
-                task_context = {
-                    'queue': queue,
-                    'taskname': taskname,
-
-                    'delivery_info': msg_obj.get('properties', {}).get('delivery_info', {}),
-                    'task_properties': {
-                        'task': taskname,
-                        'id': msg_body.get('id', ''),
-                        'expires': msg_body.get('expires'),  # '2014-09-04T10:27:32.919152+00:00'
-                        'timelimit': timelimit,  # [90, 60]
-                        'utc': msg_body.get('utc', True)
-                    },
-                }
-
-                # discard tasks that are expired if expire metadata comes with the message
-                cur_time = datetime.utcnow() if task_context['task_properties']['utc'] else datetime.now()
-                expire_time = datetime.strptime(msg_body.get('expires').replace("Z", "").rsplit('+', 1)[0],
-                                                '%Y-%m-%dT%H:%M:%S.%f') \
-                    if msg_body.get('expires') else cur_time + timedelta(seconds=10)
-
-                check_id = (msg_body['args'][0].get('check_id', 'xx') if len(msg_body['args']) > 0 and isinstance(
-                    msg_body['args'][0], dict) else 'XX')
-                logger.debug(
-                    'task loop analyzing time: check_id=%s, cur_time: %s , expire_time: %s, msg_body["expires"]=%s',
-                    check_id, cur_time, expire_time, msg_body.get('expires'))
-
-                if cur_time < expire_time:
-                    with reactor.enter_task_context(taskname, t_hard, t_soft):
-                        known_tasks[taskname](*func_args, task_context=task_context, **func_kwargs)
-                else:
-                    logger.warn(
-                        'Discarding task due to time expiration. cur_time: %s , expire_time: %s, '
-                        'msg_body["expires"]=%s  ----  msg_body=%s',
-                        cur_time, expire_time, msg_body.get('expires'), msg_body)
-                    expired_count += 1
-                    if expired_count % 500 == 0:
-                        logger.warning("expired tasks count: %s", expired_count)
+                    except Exception, e:
+                        span.set_tag('queue_processing_result', 'error')
+                        span.log_kv({
+                            'event': 'queue_processing_error',
+                            'message': str(e)
+                        })
                 count += 1
 
         except Exception:
             logger.exception('Exception in redis loop. Details: ')
             time.sleep(5)  # avoid heavy log spam here
             # TODO: some exit condition on failure: maybe when number of consecutive failures > n ?
+
+
+def extract_tracing_span(carrier):
+    propagator = TextPropagator()
+    try:
+        span_context = propagator.extract(carrier)
+        return ot.tracer.start_span(operation_name='queue_processing', child_of=span_context)
+    except Exception:
+        return ot.tracer.start_span(operation_name='queue_processing')
+
+
+def process_message(queue, known_tasks, reactor, msg_obj):
+    """
+    The function runs processing of a task.
+    - queue - the name of the queue the task comes from
+    - known_tasks - dictionary of tasks that processor knows how to work with
+    - reactor - instance of FlowControlReactor
+    - msg_obj - object that contains the task to process
+    Returns True if the message was processed successfully
+    """
+    msg_body = None
+    body_encoding = msg_obj.get("properties", {}).get("body_encoding")
+    if body_encoding == "nested":
+        msg_body = msg_obj["body"]
+    elif body_encoding == "base64":
+        msg_body = json.loads(base64.b64decode(msg_obj['body']))
+    elif body_encoding == "snappy":
+        msg_body = json.loads(snappy.decompress(base64.b64decode(msg_obj['body'])))
+
+    taskname = msg_body['task']
+    func_args = msg_body['args']
+    func_kwargs = msg_body['kwargs']
+    timelimit = msg_body.get('timelimit')  # [90, 60]
+    t_hard, t_soft = timelimit
+
+    # we pass task metadata as a kwargs right now, later will be put in the function context by decorator
+    task_context = {
+        'queue': queue,
+        'taskname': taskname,
+
+        'delivery_info': msg_obj.get('properties', {}).get('delivery_info', {}),
+        'task_properties': {
+            'task': taskname,
+            'id': msg_body.get('id', ''),
+            'expires': msg_body.get('expires'),  # '2014-09-04T10:27:32.919152+00:00'
+            'timelimit': timelimit,  # [90, 60]
+            'utc': msg_body.get('utc', True)
+        },
+    }
+
+    # discard tasks that are expired if expire metadata comes with the message
+    cur_time = datetime.utcnow() if task_context['task_properties']['utc'] else datetime.now()
+    expire_time = datetime.strptime(msg_body.get('expires').replace("Z", "").rsplit('+', 1)[0],
+                                    '%Y-%m-%dT%H:%M:%S.%f') \
+        if msg_body.get('expires') else cur_time + timedelta(seconds=10)
+
+    check_id = (msg_body['args'][0].get('check_id', 'xx') if len(msg_body['args']) > 0 and isinstance(
+        msg_body['args'][0], dict) else 'XX')
+    logger.debug(
+        'task loop analyzing time: check_id=%s, cur_time: %s , expire_time: %s, msg_body["expires"]=%s',
+        check_id, cur_time, expire_time, msg_body.get('expires'))
+
+    if cur_time >= expire_time:
+        logger.warn(
+            'Discarding task due to time expiration. cur_time: %s , expire_time: %s, '
+            'msg_body["expires"]=%s  ----  msg_body=%s',
+            cur_time, expire_time, msg_body.get('expires'), msg_body)
+        return False
+
+    with reactor.enter_task_context(taskname, t_hard, t_soft):
+        known_tasks[taskname](*func_args, task_context=task_context, **func_kwargs)
+    return True
 
 
 class FlowControlReactor(object):
