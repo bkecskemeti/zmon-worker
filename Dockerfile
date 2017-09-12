@@ -10,6 +10,8 @@ ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 ADD requirements.txt /app/requirements.txt
 
+RUN pip2 install instana
+
 # TODO: Remove once cassandra-driver issue is fixed (ref: https://datastax-oss.atlassian.net/browse/PYTHON-656)
 RUN pip2 install -U Cython==0.24.1
 

@@ -16,7 +16,7 @@ import plugin_manager
 import rpc_server
 from .flags import MONITOR_RESTART, MONITOR_KILL_REQ, MONITOR_PING
 from .web_server.start import start_web
-
+from .tracing import init_opentracing_tracer
 
 warnings.filterwarnings('ignore', category=SubjectAltNameWarning)
 
@@ -32,6 +32,8 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config-file", help="path to config file")
     parser.add_argument('--no-rpc', action='store_true', help='Do not start XML-RPC server')
+    parser.add_argument('--opentracing', dest='opentracing', default=os.environ.get('WORKER_OPENTRACING'),
+                        help='Enable opentracing with one of supported providers: "instana", "basic"')
     return parser.parse_args(args)
 
 
@@ -60,6 +62,7 @@ def main(args=None):
 
     args = parse_args(args)
 
+    init_opentracing_tracer(args.opentracing)
     main_proc = rpc_server.MainProcess()
 
     config = {}
