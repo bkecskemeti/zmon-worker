@@ -25,6 +25,8 @@ from redis_context_manager import RedisConnHandler
 from tasks import configure_tasks
 from tasks import check_and_notify, trial_run, cleanup
 from basictracer.text_propagator import TextPropagator
+from basictracer.context import SpanContext
+from instana import util
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +131,6 @@ def flow_simple_queue_processor(queue='', **execution_context):
 
                 trace = msg_obj.get("properties", {}).get("trace")
                 span = extract_tracing_span(trace)
-
                 with span:
                     try:
                         is_processed = process_message(queue, known_tasks, reactor, msg_obj)
@@ -147,6 +148,7 @@ def flow_simple_queue_processor(queue='', **execution_context):
                             'event': 'queue_processing_error',
                             'message': str(e)
                         })
+                span.finish()
                 count += 1
 
         except Exception:
@@ -156,9 +158,12 @@ def flow_simple_queue_processor(queue='', **execution_context):
 
 
 def extract_tracing_span(carrier):
-    propagator = TextPropagator()
     try:
-        span_context = propagator.extract(carrier)
+        span_context = SpanContext(span_id=util.header_to_id(carrier['X-INSTANA-S']),
+                               trace_id=util.header_to_id(carrier['X-INSTANA-T']),
+                               baggage={},
+                               sampled=True)
+
         return ot.tracer.start_span(operation_name='queue_processing', child_of=span_context)
     except Exception:
         return ot.tracer.start_span(operation_name='queue_processing')
