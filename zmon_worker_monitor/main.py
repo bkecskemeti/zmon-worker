@@ -16,7 +16,6 @@ import plugin_manager
 import rpc_server
 from .flags import MONITOR_RESTART, MONITOR_KILL_REQ, MONITOR_PING
 from .web_server.start import start_web
-from .tracing import init_opentracing_tracer
 
 warnings.filterwarnings('ignore', category=SubjectAltNameWarning)
 
@@ -62,7 +61,6 @@ def main(args=None):
 
     args = parse_args(args)
 
-    init_opentracing_tracer(args.opentracing)
     main_proc = rpc_server.MainProcess()
 
     config = {}

@@ -46,11 +46,15 @@ class ProcessControllerProxy(rpc_utils.RpcProxy):
 
 class MainProcess(object):
 
-    def __init__(self):
+    def __init__(self, tracer_name='', log_level=logging.DEBUG):
+        self.tracer_name = tracer_name
+        self.log_level = log_level
+
         signal.signal(signal.SIGTERM, sigterm_handler)
 
     def start_proc_control(self):
         self.proc_control = ProcessController(default_target=worker.start_worker,
+                                              default_args=(self.tracer_name, self.log_level),
                                               default_flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
 
     def start_rpc_server(self):

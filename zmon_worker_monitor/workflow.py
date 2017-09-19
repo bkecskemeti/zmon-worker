@@ -148,7 +148,6 @@ def flow_simple_queue_processor(queue='', **execution_context):
                             'event': 'queue_processing_error',
                             'message': str(e)
                         })
-                span.finish()
                 count += 1
 
         except Exception:
