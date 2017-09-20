@@ -158,11 +158,7 @@ def flow_simple_queue_processor(queue='', **execution_context):
 
 def extract_tracing_span(carrier):
     try:
-        span_context = SpanContext(span_id=util.header_to_id(carrier['X-INSTANA-S']),
-                               trace_id=util.header_to_id(carrier['X-INSTANA-T']),
-                               baggage={},
-                               sampled=True)
-
+        span_context = ot.tracer.extract(ot.Format.TEXT_MAP, carrier)
         return ot.tracer.start_span(operation_name='queue_processing', child_of=span_context)
     except Exception:
         return ot.tracer.start_span(operation_name='queue_processing')

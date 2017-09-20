@@ -55,7 +55,6 @@ class MainProcess(object):
 
     def start_proc_control(self):
         self.proc_control = ProcessController(default_target=worker.start_worker,
-                                              default_args=(self.tracer_name, self.log_level),
                                               default_flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
 
     def start_rpc_server(self):
