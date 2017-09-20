@@ -83,14 +83,17 @@ def main(args=None):
         port = config.get('redis.port', 6379)
         config.update({"redis.servers": '{}:{}'.format(config["redis.host"], port)})
 
+    log_level=config.get('loglevel', 'INFO')
     # save config in our settings module
-    settings.set_workers_log_level(config.get('loglevel', 'INFO'))
+    settings.set_workers_log_level(log_level)
     settings.set_external_config(config)
     settings.set_rpc_server_port(config.get('server.port'))
 
     logging.config.dictConfig(settings.RPC_SERVER_CONF['LOGGING'])
 
     logger = logging.getLogger(__name__)
+
+    logger.info('Initializing opentracing tracer: {}'.format(args.opentracing))
 
     # start the process controller
     main_proc.start_proc_control()
@@ -99,6 +102,8 @@ def main(args=None):
     main_proc.proc_control.spawn_process(
         target=start_web,
         kwargs=dict(
+            log_level=log_level,
+            tracer_name=args.opentracing,
             listen_on=config.get('webserver.listen_on', '0.0.0.0'),
             port=int(config.get('webserver.port', '8080')),
             log_conf=None,
@@ -120,7 +125,7 @@ def main(args=None):
     for qn in queues.split(','):
         queue, N = (qn.rsplit('/', 1) + [DEFAULT_NUM_PROC])[:2]
         main_proc.proc_control.spawn_many(int(N),
-                                          args=(args.opentracing, config.get('loglevel', 'INFO')),
+                                          args=(args.opentracing, log_level),
                                           kwargs={"queue": queue, "flow": "simple_queue_processor"},
                                           flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
 

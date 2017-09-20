@@ -47,9 +47,7 @@ class ProcessControllerProxy(rpc_utils.RpcProxy):
 
 class MainProcess(object):
 
-    def __init__(self, tracer_name='', log_level=logging.DEBUG):
-        self.tracer_name = tracer_name
-        self.log_level = log_level
+    def __init__(self):
 
         signal.signal(signal.SIGTERM, sigterm_handler)
 

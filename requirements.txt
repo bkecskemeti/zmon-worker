@@ -34,3 +34,4 @@ timeperiod2==0.1
 Yapsy>=1.10.423
 opentracing==1.2.2
 basictracer>=2.2.0
+opentracing_utils
