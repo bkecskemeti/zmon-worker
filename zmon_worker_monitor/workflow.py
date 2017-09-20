@@ -24,9 +24,6 @@ import opentracing as ot
 from redis_context_manager import RedisConnHandler
 from tasks import configure_tasks
 from tasks import check_and_notify, trial_run, cleanup
-from basictracer.text_propagator import TextPropagator
-from basictracer.context import SpanContext
-from instana import util
 
 logger = logging.getLogger(__name__)
 
