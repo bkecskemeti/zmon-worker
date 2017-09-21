@@ -7,7 +7,6 @@ Server module for exposing an rpc interface for clients to remotely control a lo
 import sys
 import signal
 import settings
-import logging
 
 from process_controller import ProcessController
 import worker

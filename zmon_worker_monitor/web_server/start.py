@@ -5,6 +5,7 @@ from ..settings import LOGGING
 from ..tracing import init_opentracing_tracer
 import logging
 
+
 def _set_logging(log_conf):
     import logging
     reload(logging)  # prevents process freeze when logging._lock is acquired by the parent process when fork starts
@@ -12,7 +13,8 @@ def _set_logging(log_conf):
     logging.config.dictConfig(log_conf)
 
 
-def start_web(tracer_name='', log_level=logging.DEBUG, listen_on="0.0.0.0", port=8080, threaded=False, log_conf=None, rpc_url=None):
+def start_web(tracer_name='', log_level=logging.DEBUG,
+              listen_on="0.0.0.0", port=8080, threaded=False, log_conf=None, rpc_url=None):
     """
     Starts HTTP server (flask app). Convenient to use as entry point when starting the server in a child process.
     Notice this server is NOT secure so use it only in a restricted environment.

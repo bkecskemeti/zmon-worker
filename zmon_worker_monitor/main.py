@@ -83,7 +83,7 @@ def main(args=None):
         port = config.get('redis.port', 6379)
         config.update({"redis.servers": '{}:{}'.format(config["redis.host"], port)})
 
-    log_level=config.get('loglevel', 'INFO')
+    log_level = config.get('loglevel', 'INFO')
     # save config in our settings module
     settings.set_workers_log_level(log_level)
     settings.set_external_config(config)
