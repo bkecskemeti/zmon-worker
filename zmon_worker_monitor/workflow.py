@@ -28,6 +28,8 @@ from tasks import check_and_notify, trial_run, cleanup
 logger = logging.getLogger(__name__)
 
 TASK_POP_TIMEOUT = 5
+TRACING_TAG_QUEUE_RESULT = 'queue_processing_result'
+TRACING_QUEUE_OPERATION = 'queue_processing'
 
 __config = None
 
@@ -132,15 +134,15 @@ def flow_simple_queue_processor(queue='', **execution_context):
                     try:
                         is_processed = process_message(queue, known_tasks, reactor, msg_obj)
                         if is_processed:
-                            span.set_tag('queue_processing_result', 'success')
+                            span.set_tag(TRACING_TAG_QUEUE_RESULT, 'success')
                         else:
-                            span.set_tag('queue_processing_result', 'expired')
+                            span.set_tag(TRACING_TAG_QUEUE_RESULT, 'expired')
                             expired_count += 1
                             if expired_count % 500 == 0:
                                 logger.warning("expired tasks count: %s", expired_count)
 
                     except Exception, e:
-                        span.set_tag('queue_processing_result', 'error')
+                        span.set_tag(TRACING_TAG_QUEUE_RESULT, 'error')
                         span.log_kv({
                             'event': 'queue_processing_error',
                             'message': str(e)
@@ -156,9 +158,9 @@ def flow_simple_queue_processor(queue='', **execution_context):
 def extract_tracing_span(carrier):
     try:
         span_context = ot.tracer.extract(ot.Format.TEXT_MAP, carrier)
-        return ot.tracer.start_span(operation_name='queue_processing', child_of=span_context)
+        return ot.tracer.start_span(operation_name=TRACING_QUEUE_OPERATION, child_of=span_context)
     except Exception:
-        return ot.tracer.start_span(operation_name='queue_processing')
+        return ot.tracer.start_span(operation_name=TRACING_QUEUE_OPERATION)
 
 
 def process_message(queue, known_tasks, reactor, msg_obj):

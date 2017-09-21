@@ -6,6 +6,10 @@ Execution script
 import settings
 import logging
 from .tracing import init_opentracing_tracer
+from opentracing_utils import trace_requests
+
+
+trace_requests()
 
 
 def _set_logging(log_conf):

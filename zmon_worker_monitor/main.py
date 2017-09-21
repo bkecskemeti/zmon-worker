@@ -32,7 +32,7 @@ def parse_args(args):
     parser.add_argument("-c", "--config-file", help="path to config file")
     parser.add_argument('--no-rpc', action='store_true', help='Do not start XML-RPC server')
     parser.add_argument('--opentracing', dest='opentracing', default=os.environ.get('WORKER_OPENTRACING'),
-                        help='Enable opentracing with one of supported providers: "instana", "basic"')
+                        help='Enable opentracing with one of supported providers (noop by default): "instana"')
     return parser.parse_args(args)
 
 
@@ -93,8 +93,6 @@ def main(args=None):
 
     logger = logging.getLogger(__name__)
 
-    logger.info('Initializing opentracing tracer: {}'.format(args.opentracing))
-
     # start the process controller
     main_proc.start_proc_control()
 
@@ -125,8 +123,12 @@ def main(args=None):
     for qn in queues.split(','):
         queue, N = (qn.rsplit('/', 1) + [DEFAULT_NUM_PROC])[:2]
         main_proc.proc_control.spawn_many(int(N),
-                                          args=(args.opentracing, log_level),
-                                          kwargs={"queue": queue, "flow": "simple_queue_processor"},
+                                          kwargs=dict(
+                                              queue=queue,
+                                              flow='simple_queue_processor',
+                                              tracer_name=args.opentracing,
+                                              log_level=log_level
+                                          ),
                                           flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
 
     if not args.no_rpc:
