@@ -2,7 +2,7 @@ FROM registry.opensource.zalan.do/stups/ubuntu:16.04-49
 
 #making this a cachable point as compile takes forever without -j
 
-RUN apt-get update && apt-get -y install
+RUN apt-get update && apt-get -y install \
     python-pip \
     python-dev \
     libev4 \
