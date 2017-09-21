@@ -3,6 +3,7 @@ FROM registry.opensource.zalan.do/stups/ubuntu:16.04-49
 #making this a cachable point as compile takes forever without -j
 
 RUN apt-get update && apt-get -y install \
+    git-core \
     python-pip \
     python-dev \
     libev4 \
@@ -21,11 +22,6 @@ RUN apt-get update && apt-get -y install \
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 ADD requirements.txt /app/requirements.txt
-
-# TODO: Remove once cassandra-driver issue is fixed (ref: https://datastax-oss.atlassian.net/browse/PYTHON-656)
-RUN pip2 install -U Cython==0.24.1 instana
-
-RUN pip2 install --upgrade -r /app/requirements.txt
 
 ADD ./ /app/
 
