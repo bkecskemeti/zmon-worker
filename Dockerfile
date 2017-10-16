@@ -18,7 +18,7 @@ RUN apt-get update && apt-get -y install \
     freetds-dev && \
     pip2 install -U pip setuptools urllib3 Cython==0.24.1
 
-RUN pip2 install -U instana
+RUN pip2 install -U instana>0.6.5
 
 # make requests library use the Debian CA bundle (includes Zalando CA)
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
