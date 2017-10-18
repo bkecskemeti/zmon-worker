@@ -579,8 +579,8 @@ def avg(sequence):
     2.5
     '''
 
-    l = len(sequence) * 1.0
-    return (sum(sequence) / l if l else 0)
+    length = len(sequence) * 1.0
+    return (sum(sequence) / length if length else 0)
 
 
 def empty(v):
@@ -1566,7 +1566,8 @@ class MainTask(object):
                     check_result['check_result']['ts'] = int(req['schedule_time'])
                     del check_result['check_result']['value']['_use_scheduled_time']
 
-                self._dataservice_poster.enqueue(check_result)
+                self.send_to_dataservice([check_result])
+                # self._dataservice_poster.enqueue(check_result)
 
             return result
         # TODO: except SoftTimeLimitExceeded:
