@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from ..settings import LOGGING
-from ..tracing import init_opentracing_tracer
 import logging
+
+from ..settings import LOGGING
 
 
 def _set_logging(log_conf):
@@ -13,8 +13,7 @@ def _set_logging(log_conf):
     logging.config.dictConfig(log_conf)
 
 
-def start_web(tracer_name='', log_level=logging.DEBUG,
-              listen_on="0.0.0.0", port=8080, threaded=False, log_conf=None, rpc_url=None):
+def start_web(log_level=logging.DEBUG, listen_on="0.0.0.0", port=8080, threaded=False, log_conf=None, rpc_url=None):
     """
     Starts HTTP server (flask app). Convenient to use as entry point when starting the server in a child process.
     Notice this server is NOT secure so use it only in a restricted environment.
@@ -27,8 +26,6 @@ def start_web(tracer_name='', log_level=logging.DEBUG,
     """
 
     _set_logging(log_conf if log_conf else LOGGING)
-
-    init_opentracing_tracer(tracer_name, log_level)
 
     from . import web  # imported here to avoid flask related modules loaded in workers' memory
 

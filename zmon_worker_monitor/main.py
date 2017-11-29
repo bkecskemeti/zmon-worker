@@ -32,7 +32,9 @@ def parse_args(args):
     parser.add_argument("-c", "--config-file", help="path to config file")
     parser.add_argument('--no-rpc', action='store_true', help='Do not start XML-RPC server')
     parser.add_argument('--opentracing', dest='opentracing', default=os.environ.get('WORKER_OPENTRACING'),
-                        help='Enable opentracing with one of supported providers (noop by default): "instana"')
+                        help='Enable opentracing with one of supported providers (noop by default)')
+    parser.add_argument('--opentracing-key', dest='opentracing_key', default=os.environ.get('WORKER_OPENTRACING_KEY'),
+                        help='Opentracing access key if required.')
     return parser.parse_args(args)
 
 
@@ -51,7 +53,7 @@ def process_config(config):
 
         resp = requests.get('http://169.254.169.254/latest/meta-data/placement/availability-zone', timeout=3)
         config['region'] = resp.text[:-1]
-    except:
+    except Exception:
         logging.warning('Failed to retrieve AWS account info.')
         config['account'] = 'aws:error-during-startup'
         config['region'] = 'unknown'
@@ -101,7 +103,6 @@ def main(args=None):
         target=start_web,
         kwargs=dict(
             log_level=log_level,
-            tracer_name=args.opentracing,
             listen_on=config.get('webserver.listen_on', '0.0.0.0'),
             port=int(config.get('webserver.port', '8080')),
             log_conf=None,
@@ -122,14 +123,16 @@ def main(args=None):
     queues = config['zmon.queues']
     for qn in queues.split(','):
         queue, N = (qn.rsplit('/', 1) + [DEFAULT_NUM_PROC])[:2]
-        main_proc.proc_control.spawn_many(int(N),
-                                          kwargs=dict(
-                                              queue=queue,
-                                              flow='simple_queue_processor',
-                                              tracer_name=args.opentracing,
-                                              log_level=log_level
-                                          ),
-                                          flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
+        main_proc.proc_control.spawn_many(
+            int(N),
+            kwargs=dict(
+                queue=queue,
+                flow='simple_queue_processor',
+                tracer_name=args.opentracing,
+                tracer_key=args.opentracing_key,
+                log_level=log_level,
+            ),
+            flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
 
     if not args.no_rpc:
         try:
