@@ -29,9 +29,12 @@ def start_worker(tracer_name='', tracer_key='', log_level=logging.DEBUG, **kwarg
     tracer_port = kwargs.get('tracer_port')
     tracer_port = int(tracer_port) if tracer_port else None
 
+    logger = logging.getLogger(__name__)
+    logger.info('OPENTRACING: tracer={} host={} port={}'.format(tracer_name, kwargs.get('tracer_host'), tracer_port))
+
     init_opentracing_tracer(
         tracer_name, component_name='zmon-worker', access_token=tracer_key, collector_host=kwargs.get('tracer_host'),
-        collector_port=tracer_port)
+        collector_port=tracer_port, verbosity=kwargs.get('tracer_verbosity'))
 
     import workflow
 

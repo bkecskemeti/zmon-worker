@@ -39,6 +39,9 @@ def parse_args(args):
                         help='Opentracing collector host if required.')
     parser.add_argument('--opentracing-port', dest='opentracing_port', default=os.environ.get('WORKER_OPENTRACING_PORT'),
                         help='Opentracing collector port if required.')
+    parser.add_argument('--opentracing-verbosity', dest='opentracing_verbosity',
+                        default=os.environ.get('WORKER_OPENTRACING_VERBOSITY', 0),
+                        help='Opentracing tracer verbosity.')
     return parser.parse_args(args)
 
 
@@ -136,6 +139,7 @@ def main(args=None):
                 tracer_key=args.opentracing_key,
                 tracer_host=args.opentracing_host,
                 tracer_port=args.opentracing_port,
+                tracer_verbosity=int(args.opentracing_verbosity),
                 log_level=log_level,
             ),
             flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
