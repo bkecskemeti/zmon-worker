@@ -35,6 +35,10 @@ def parse_args(args):
                         help='Enable opentracing with one of supported providers (noop by default)')
     parser.add_argument('--opentracing-key', dest='opentracing_key', default=os.environ.get('WORKER_OPENTRACING_KEY'),
                         help='Opentracing access key if required.')
+    parser.add_argument('--opentracing-host', dest='opentracing_host', default=os.environ.get('WORKER_OPENTRACING_HOST'),
+                        help='Opentracing collector host if required.')
+    parser.add_argument('--opentracing-port', dest='opentracing_port', default=os.environ.get('WORKER_OPENTRACING_PORT'),
+                        help='Opentracing collector port if required.')
     return parser.parse_args(args)
 
 
@@ -130,6 +134,8 @@ def main(args=None):
                 flow='simple_queue_processor',
                 tracer_name=args.opentracing,
                 tracer_key=args.opentracing_key,
+                tracer_host=args.opentracing_host,
+                tracer_port=args.opentracing_port,
                 log_level=log_level,
             ),
             flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
