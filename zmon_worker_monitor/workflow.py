@@ -142,7 +142,7 @@ def flow_simple_queue_processor(queue='', **execution_context):
                                 logger.warning("expired tasks count: %s", expired_count)
                     except Exception, e:
                         span.set_tag(TRACING_TAG_QUEUE_RESULT, 'error')
-                        span.set_tag('error', 'true')
+                        span.set_tag('error', True)
                         span.log_kv({
                             'event': 'queue_processing_error',
                             'message': str(e)
