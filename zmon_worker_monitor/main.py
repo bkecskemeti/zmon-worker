@@ -35,9 +35,11 @@ def parse_args(args):
                         help='Enable opentracing with one of supported providers (noop by default)')
     parser.add_argument('--opentracing-key', dest='opentracing_key', default=os.environ.get('WORKER_OPENTRACING_KEY'),
                         help='Opentracing access key if required.')
-    parser.add_argument('--opentracing-host', dest='opentracing_host', default=os.environ.get('WORKER_OPENTRACING_HOST'),
+    parser.add_argument('--opentracing-host', dest='opentracing_host',
+                        default=os.environ.get('WORKER_OPENTRACING_HOST'),
                         help='Opentracing collector host if required.')
-    parser.add_argument('--opentracing-port', dest='opentracing_port', default=os.environ.get('WORKER_OPENTRACING_PORT'),
+    parser.add_argument('--opentracing-port', dest='opentracing_port',
+                        default=os.environ.get('WORKER_OPENTRACING_PORT'),
                         help='Opentracing collector port if required.')
     parser.add_argument('--opentracing-verbosity', dest='opentracing_verbosity',
                         default=os.environ.get('WORKER_OPENTRACING_VERBOSITY', 0),
