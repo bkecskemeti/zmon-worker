@@ -128,11 +128,11 @@ def flow_simple_queue_processor(queue='', **execution_context):
 
                 msg_obj = json.loads(msg)
 
-                trace = msg_obj.get("properties", {}).get("trace")
+                trace = msg_obj.get('properties', {}).get('trace')
                 span = extract_tracing_span(trace)
                 with span:
                     try:
-                        is_processed = process_message(queue, known_tasks, reactor, msg_obj)
+                        is_processed = process_message(queue, known_tasks, reactor, msg_obj, current_span=span)
                         if is_processed:
                             span.set_tag(TRACING_TAG_QUEUE_RESULT, 'success')
                         else:
@@ -140,9 +140,9 @@ def flow_simple_queue_processor(queue='', **execution_context):
                             expired_count += 1
                             if expired_count % 500 == 0:
                                 logger.warning("expired tasks count: %s", expired_count)
-
                     except Exception, e:
                         span.set_tag(TRACING_TAG_QUEUE_RESULT, 'error')
+                        span.set_tag('error', 'true')
                         span.log_kv({
                             'event': 'queue_processing_error',
                             'message': str(e)
@@ -163,7 +163,7 @@ def extract_tracing_span(carrier):
         return ot.tracer.start_span(operation_name=TRACING_QUEUE_OPERATION)
 
 
-def process_message(queue, known_tasks, reactor, msg_obj):
+def process_message(queue, known_tasks, reactor, msg_obj, current_span=None):
     """
     The function runs processing of a task.
     - queue - the name of the queue the task comes from
@@ -213,6 +213,9 @@ def process_message(queue, known_tasks, reactor, msg_obj):
     logger.debug(
         'task loop analyzing time: check_id=%s, cur_time: %s , expire_time: %s, msg_body["expires"]=%s',
         check_id, cur_time, expire_time, msg_body.get('expires'))
+
+    if current_span:
+        current_span.set_tag('check_id', check_id)
 
     if cur_time >= expire_time:
         logger.warn(
