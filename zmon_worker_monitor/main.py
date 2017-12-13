@@ -138,10 +138,6 @@ def main(args=None):
                 queue=queue,
                 flow='simple_queue_processor',
                 tracer_name=args.opentracing,
-                tracer_key=args.opentracing_key,
-                tracer_host=args.opentracing_host,
-                tracer_port=args.opentracing_port,
-                tracer_verbosity=int(args.opentracing_verbosity),
                 log_level=log_level,
             ),
             flags=MONITOR_RESTART | MONITOR_KILL_REQ | MONITOR_PING)
