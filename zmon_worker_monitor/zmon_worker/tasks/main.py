@@ -639,6 +639,8 @@ def build_default_context():
         'map': map,
         'max': max,
         'min': min,
+        'percentile': mathfun.percentile,
+        'median': mathfun.median,
         'normalvariate': random.normalvariate,
         'oct': oct,
         'ord': ord,
