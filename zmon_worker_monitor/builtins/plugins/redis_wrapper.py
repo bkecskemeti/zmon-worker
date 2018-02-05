@@ -89,6 +89,9 @@ class RedisWrapper(object):
     def smembers(self, key):
         return self.__con.smembers(key)
 
+    def zcard(self, key):
+        return self.__con.zcard(key)
+
     def statistics(self):
         '''
         Return general Redis statistics such as operations/s
