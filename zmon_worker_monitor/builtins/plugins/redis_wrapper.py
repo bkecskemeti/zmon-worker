@@ -89,6 +89,9 @@ class RedisWrapper(object):
     def smembers(self, key):
         return self.__con.smembers(key)
 
+    def scard(self, key):
+        return self.__con.scard(key)
+
     def zcard(self, key):
         return self.__con.zcard(key)
 
